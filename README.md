@@ -1,2 +1,2 @@
 # ComputacionGrafica
-Problemas en JAVA sobre Computación Gráfica
+Computación Gráfica en OpenGL
