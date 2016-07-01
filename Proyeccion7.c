@@ -4,6 +4,7 @@
 #include <FreeImage.h>
 #define PI 3.141592
 int texID[13];
+int luzx,luzy,luzz;
 char* textureFileNames[13] = {
 "textures/Piso.jpg",
 "textures/ParedRoja.jpg",
@@ -27,6 +28,8 @@ int angH;
 int angV;
 float mod;
 int FC[100][40][200];
+GLfloat SpecRef[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+GLubyte Shine =	128;
 void Draw2(float x,float y,float z){
 	glPushMatrix();
 		glTranslatef(x+0.5,y+0.5,z+0.5);
@@ -328,8 +331,72 @@ void SeleccionColores(int i,int j, int k){
 		Draw2(i,j,k);
 	}
 }
+
+static float spotAngle = 15.0; // Spotlight cone half-angle.
+static float spotExponent = 2.0; // Spotlight exponent = attenuation.
+
+void setup(void)
+{
+   glClearColor(0.0, 0.0, 0.0, 1.0);
+   glEnable(GL_DEPTH_TEST); // Enable depth testing.
+
+   // Turn on OpenGL lighting.
+   glEnable(GL_LIGHTING);
+
+   // Light property vectors.
+   float lightAmb[] = { 0.5, 0.5, 0.5, 1.0 };
+   float lightDifAndSpec[] = { 0.7, 0.7, 0.7, 1.0 };// Intensidad de la luz
+   float globAmb[] = { 0.2, 0.2, 0.2, 1.0 };// Luz del ambiente
+
+   // Light properties.
+   glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmb);
+   glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDifAndSpec);
+   glLightfv(GL_LIGHT0, GL_SPECULAR, lightDifAndSpec);
+
+   glEnable(GL_LIGHT0); // Enable particular light source.
+   glLightModelfv(GL_LIGHT_MODEL_AMBIENT, globAmb); // Global ambient light.
+   glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE); // Enable local viewpoint.
+   glEnable(GL_LIGHT0); // Enable particular light source.
+
+   // Cull back faces.
+   glEnable(GL_CULL_FACE);
+   glCullFace(GL_BACK);
+   
+   glEnable(GL_COLOR_MATERIAL);  
+}
+
+// Drawing routine.
+void drawScene()
+{
+	//if(pos[0] > 40 && pos[1] > 20 && pos[2] < 60){
+	//	luzx = 70.0; luzy = 50.0; luzz = 30.0;}
+	//else{
+		//luzx = ((int)pos[0]/20) * 20 + 10;
+		//luzy = 50.0;
+		//luzz = ((int)pos[2]/20) * 20 + 10;
+		luzx = pos[0];
+		luzy = pos[1];
+		luzz = pos[2];
+	//}
+
+   float lightPos[] = { luzx, luzy, luzz, 1.0 }; // Spotlight position.
+   //float spotDirection[] = {0.0, -1.0, 0.0}; // Spotlight direction.   
+   float spotDirection[] = {dir[0],0.0,dir[2]};
+   // Spotlight properties including position.
+   glLightfv(GL_LIGHT0, GL_POSITION, lightPos);  
+   glLightf(GL_LIGHT0, GL_SPOT_CUTOFF, spotAngle);
+   glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, spotDirection);  
+   
+     
+  // glLightf(GL_LIGHT0, GL_SPOT_EXPONENT, spotExponent);
+	  glEnable(GL_COLOR_MATERIAL); 
+   glutSwapBuffers();
+}
+
 void init(){
-	glClearColor(0.0,0.0,0.0,1.0);
+	//glClearColor(0.0,0.0,0.0,1.0);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, SpecRef);
+	glMateriali(GL_FRONT, GL_SHININESS, Shine);
 	// Posicion de la camara
 	pos[0] = 30.0;
 	pos[1] = 10;
@@ -344,6 +411,7 @@ void init(){
 	up[2] = 0.0;
 	glMatrixMode(GL_TEXTURE);
     glLoadIdentity();
+    setup();
 }
 void camara(){
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -352,7 +420,7 @@ void camara(){
     gluPerspective(100.0,1.0,1.0,200.0);
     glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-gluLookAt(pos[0],pos[1],pos[2],at[0],at[1],at[2],up[0],up[1],up[2]);
+	gluLookAt(pos[0],pos[1],pos[2],at[0],at[1],at[2],up[0],up[1],up[2]);
 }
 void pintacasa(){
 	mod = sqrt(dir[0]*dir[0] + dir[2]*dir[2]);
@@ -362,7 +430,10 @@ void pintacasa(){
 	at[2] = pos[2]+dir[2];
 	// Para agachar o levantar
 	at[1] = pos[1]+mod*sin(PI*angV/180.0);
+
+	drawScene();
 	camara();
+
 	glEnable(GL_TEXTURE_2D);
 	int i,j,k;
 	for(i=99;i>=pos[0];i--){
@@ -431,6 +502,12 @@ void teclado1(unsigned char key, int x,int y){
 		case 'a':
 			if(pos[1] > 3)
 				pos[1]-=1;
+			break;
+		case '+':
+			spotAngle+=0.5;
+			break;
+		case '-':
+			spotAngle-=0.5;
 			break;
 		case 27:
 			exit(0);
@@ -524,6 +601,7 @@ int main(int argc, char** argv){
 	fclose ( fp );
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_DEPTH);
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
 	glutInitWindowPosition(0,0);
 	glutInitWindowSize(695,695);
 	glutCreateWindow("Proyeccion Del Primer Piso");
